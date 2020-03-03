@@ -7,6 +7,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -42,6 +44,55 @@ func (j Jwt) Create(form users.LoginForm, key string) (string, error) {
 	}
 
 	return hAndp + "." + signature, nil
+}
+
+func (j Jwt) Check(token string, key string) {
+	flag := 0
+
+	//首先把 token 和划分为 3 部分
+	arr := strings.Split(token, ".")
+	if len(arr) != 3 {
+		flag = 1
+		os.Exit(1)
+	}
+
+	//对 Header 解密
+	_, err := base64.StdEncoding.DecodeString(arr[0])
+	if err != nil {
+		flag = 1
+		os.Exit(1)
+	}
+
+	//对 payload 解密
+	_, err = base64.StdEncoding.DecodeString(arr[1])
+	if err != nil {
+		flag = 1
+		os.Exit(1)
+	}
+
+	//对 signature 解密
+	sign, err := base64.StdEncoding.DecodeString(arr[2])
+	if err != nil {
+		flag = 1
+		os.Exit(1)
+	}
+
+	fmt.Println(sign)
+	hAndP := arr[0] + "." + arr[1]
+	fmt.Println(hAndP)
+	s := base64.StdEncoding.EncodeToString(HmacSha256(hAndP, "redrock"))
+	fmt.Println(s)
+	//if res := bytes.Compare(sign, s); res != 0 {
+	//	flag = 1
+	//}
+
+	//if flag == 1 {
+	//	return users.LoginForm{}, errors.New("token error!")
+	//} else {
+	//	var payload Payload
+	//	//json.Unmarshal(pay, &payload)
+	//	return users.LoginForm{payload.Username, payload.Password}, nil
+	//}
 }
 
 //Header 表示 Jwt 的 header
@@ -83,18 +134,16 @@ type Signature struct {
 	key string
 }
 
+//New 返回 一个 signature
 func (s Signature) New() (string, error) {
 	j := NewJwt()
-	str1, err := j.J2S()
+	str, err := j.J2S()
 	if err != nil {
 		errors.New("Header 和 Payload 拼接失败！")
 		return "", err
 	}
 
-	mac := hmac.New(sha256.New, []byte(s.key))
-	mac.Write([]byte(str1))
-	str := mac.Sum(nil)
-	signature := base64.StdEncoding.EncodeToString(str)
+	signature := base64.StdEncoding.EncodeToString(HmacSha256(str, s.key))
 	return signature, nil
 }
 
@@ -114,4 +163,10 @@ func (j Jwt) J2S() (string, error) {
 	payloadBase64 := base64.StdEncoding.EncodeToString(p)
 
 	return strings.Join([]string{headerBase64, payloadBase64}, "."), nil
+}
+
+func HmacSha256(str string, key string) []byte {
+	mac := hmac.New(sha256.New, []byte(key))
+	mac.Write([]byte(str))
+	return mac.Sum(nil)
 }
