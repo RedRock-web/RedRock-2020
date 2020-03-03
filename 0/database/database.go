@@ -1,7 +1,7 @@
 package database
 
 import (
-	"RedRock-2020/struct"
+	"RedRock-2020/0/struct"
 	"errors"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"

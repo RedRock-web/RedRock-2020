@@ -1,8 +1,8 @@
 package main
 
 import (
-	"RedRock-2020/database"
-	"RedRock-2020/router"
+	"RedRock-2020/0/database"
+	"RedRock-2020/0/router"
 	"github.com/gin-gonic/gin"
 )
 

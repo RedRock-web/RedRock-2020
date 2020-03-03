@@ -1,7 +1,7 @@
 package jwts
 
 import (
-	"RedRock-2020/struct"
+	"RedRock-2020/0/struct"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"

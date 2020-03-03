@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"RedRock-2020/jwts"
-	"RedRock-2020/response"
+	"RedRock-2020/0/jwts"
+	"RedRock-2020/0/response"
 	"github.com/gin-gonic/gin"
 )
 
