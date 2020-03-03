@@ -25,5 +25,34 @@ func Init() *gorm.DB {
 		}
 	}
 
+	if G_db.HasTable(aaa.Infomation{}) {
+		G_db.AutoMigrate(aaa.Infomation{})
+	} else {
+		if err = G_db.CreateTable(&aaa.Infomation{}).Error; err != nil {
+			//fmt.Println(err)
+			errors.New("create table Infomation error!")
+		}
+	}
+
 	return G_db
+}
+
+func Insert(i interface{}, errMsg string) error {
+	switch t := i.(type) {
+	case aaa.User:
+		u := i.(aaa.User)
+		if err := G_db.Create(&u).Error; err != nil {
+			errors.New(errMsg)
+			return err
+		}
+	case aaa.Infomation:
+		info := i.(aaa.Infomation)
+		if err := G_db.Create(&info).Error; err != nil {
+			errors.New(errMsg)
+			return err
+		}
+	default:
+		_ = t
+	}
+	return nil
 }

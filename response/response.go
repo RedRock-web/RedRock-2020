@@ -16,3 +16,7 @@ func FormError(c *gin.Context) {
 func OkWithData(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, gin.H{"code": 10000, "message": "ok", "data": data})
 }
+
+func Error(c *gin.Context, code int, msg string) {
+	c.JSON(http.StatusOK, gin.H{"code": code, "message": msg})
+}
