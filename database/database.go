@@ -1,7 +1,7 @@
 package database
 
 import (
-	"RedRock-2020/aaa"
+	"RedRock-2020/struct"
 	"errors"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -16,21 +16,12 @@ func Init() *gorm.DB {
 		errors.New("database init error!")
 	}
 
-	if G_db.HasTable(aaa.User{}) {
-		G_db.AutoMigrate(aaa.User{})
+	if G_db.HasTable(_struct.User{}) {
+		G_db.AutoMigrate(_struct.User{})
 	} else {
-		if err = G_db.CreateTable(&aaa.User{}).Error; err != nil {
+		if err = G_db.CreateTable(&_struct.User{}).Error; err != nil {
 			//fmt.Println(err)
 			errors.New("create table users error!")
-		}
-	}
-
-	if G_db.HasTable(aaa.Infomation{}) {
-		G_db.AutoMigrate(aaa.Infomation{})
-	} else {
-		if err = G_db.CreateTable(&aaa.Infomation{}).Error; err != nil {
-			//fmt.Println(err)
-			errors.New("create table Infomation error!")
 		}
 	}
 
@@ -38,21 +29,10 @@ func Init() *gorm.DB {
 }
 
 func Insert(i interface{}, errMsg string) error {
-	switch t := i.(type) {
-	case aaa.User:
-		u := i.(aaa.User)
-		if err := G_db.Create(&u).Error; err != nil {
-			errors.New(errMsg)
-			return err
-		}
-	case aaa.Infomation:
-		info := i.(aaa.Infomation)
-		if err := G_db.Create(&info).Error; err != nil {
-			errors.New(errMsg)
-			return err
-		}
-	default:
-		_ = t
+	u := i.(_struct.User)
+	if err := G_db.Create(&u).Error; err != nil {
+		errors.New(errMsg)
+		return err
 	}
 	return nil
 }

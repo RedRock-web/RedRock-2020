@@ -1,10 +1,10 @@
 package users
 
 import (
-	"RedRock-2020/aaa"
 	"RedRock-2020/database"
 	"RedRock-2020/jwts"
 	"RedRock-2020/response"
+	"RedRock-2020/struct"
 	"errors"
 	"github.com/gin-gonic/gin"
 )
@@ -15,19 +15,19 @@ func Register(c *gin.Context) {
 	if IsRegiste(f.Username) {
 		response.Error(c, 10003, "user exist!")
 	} else {
-		database.Insert(aaa.User{Username: f.Username, Password: f.Password}, "register insert record error!")
+		database.Insert(_struct.User{Username: f.Username, Password: f.Password}, "register insert record error!")
 	}
 	token := GetJwt(f, "register create jwt error!")
 	response.OkWithData(c, gin.H{"token": token})
 }
 
 func IsRegiste(username string) bool {
-	var user aaa.User
+	var user _struct.User
 	database.G_db.Where("username = ?", username).First(&user)
 	return user.ID != 0
 }
 
-func BindJson(c *gin.Context) (f aaa.LoginForm) {
+func BindJson(c *gin.Context) (f _struct.LoginForm) {
 	if err := c.ShouldBindJSON(&f); err != nil {
 		response.FormError(c)
 		//fmt.Println(err)
@@ -51,20 +51,57 @@ func Login(c *gin.Context) {
 	}
 }
 
-func PasswdIsOk(f aaa.LoginForm) bool {
-	var user aaa.User
-	database.G_db.Where(aaa.User{
+func PasswdIsOk(f _struct.LoginForm) bool {
+	var user _struct.User
+	database.G_db.Where(_struct.User{
 		Username: f.Username,
 		Password: f.Password,
 	}).First(&user)
-	return user.ID == 0
+	return user.ID != 0
 }
 
-func GetJwt(f aaa.LoginForm, errMsg string) string {
+func GetJwt(f _struct.LoginForm, errMsg string) string {
 	j := jwts.NewJwt()
 	token, err := j.Create(f, "redrock")
 	if err != nil {
 		errors.New(errMsg)
 	}
 	return token
+}
+
+func Modify(c *gin.Context) {
+	m := _struct.ModifyForm{}
+	if err := c.ShouldBindJSON(&m); err != nil {
+		response.FormError(c)
+		errors.New("bind json error when modify info!")
+	}
+	if AimsIsOk(m.Aims) {
+		err := database.G_db.Model(&_struct.User{}).Where("username = ?", c.Keys["username"]).Update(m.Aims, m.Content).Error
+		if err != nil {
+			errors.New("modify info errors!")
+		}
+		response.Ok(c)
+	} else {
+		response.FormError(c)
+	}
+}
+
+func AimsIsOk(aims string) bool {
+	return aims == "gender" || aims == "nickname" || aims == "introduction"
+}
+
+func GetInfo(c *gin.Context) {
+	username := c.Query("username")
+	info := _struct.User{}
+	err := database.G_db.Where("username = ?", username).Find(&info).Error
+	if err != nil {
+		errors.New("get info error!")
+		return
+	}
+	response.OkWithData(c, gin.H{
+		"gender":      info.Gender,
+		"nickname":    info.Nickname,
+		"uid":         info.Uid,
+		"introdction": info.Introduction,
+	})
 }

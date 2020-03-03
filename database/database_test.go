@@ -1,16 +1,13 @@
 package database
 
 import (
-	"RedRock-2020/aaa"
+	"RedRock-2020/struct"
+	"fmt"
 	"testing"
 )
 
 func TestInsert(t *testing.T) {
 	G_db = Init()
-	a := aaa.User{
-		Username: "sfd",
-		Password: "gwe",
-	}
-
-	Insert(a, "sdf")
+	err := G_db.Model(&_struct.User{}).Where("username = ?", "sdf").Update("nickname", "SDf").Error
+	fmt.Println(err)
 }
