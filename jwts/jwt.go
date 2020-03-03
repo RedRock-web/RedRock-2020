@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -28,16 +27,19 @@ func NewJwt() Jwt {
 }
 
 //Create 返回 一个 特定的 Jwt
-func (j Jwt) Create(form users.LoginForm, key string) (string, error) {
+func (j *Jwt) Create(form users.LoginForm, key string) (string, error) {
 	j.form = form
 	j.Signature.key = key
 
-	hAndp, err := j.J2S()
+	//获取 header and payload
+	hAndp, err := j.headerAndPayload2str()
 	if err != nil {
 		errors.New("Header 和 Payload 拼接失败！")
 		return "", err
 	}
-	signature, err := j.Signature.New()
+
+	//获取 signature
+	signature, err := j.Signature.New(*j)
 	if err != nil {
 		errors.New("获取 Signature 失败！")
 		return "", err
@@ -46,53 +48,41 @@ func (j Jwt) Create(form users.LoginForm, key string) (string, error) {
 	return hAndp + "." + signature, nil
 }
 
-func (j Jwt) Check(token string, key string) {
-	flag := 0
-
+func (j *Jwt) Check(token string, key string) (users.LoginForm, error) {
 	//首先把 token 和划分为 3 部分
 	arr := strings.Split(token, ".")
 	if len(arr) != 3 {
-		flag = 1
-		os.Exit(1)
+		return users.LoginForm{}, errors.New("token error!")
 	}
 
 	//对 Header 解密
 	_, err := base64.StdEncoding.DecodeString(arr[0])
 	if err != nil {
-		flag = 1
-		os.Exit(1)
+		return users.LoginForm{}, errors.New("token error!")
 	}
 
 	//对 payload 解密
-	_, err = base64.StdEncoding.DecodeString(arr[1])
+	pay, err := base64.StdEncoding.DecodeString(arr[1])
 	if err != nil {
-		flag = 1
-		os.Exit(1)
+		return users.LoginForm{}, errors.New("token error!")
 	}
 
 	//对 signature 解密
-	sign, err := base64.StdEncoding.DecodeString(arr[2])
+	_, err = base64.StdEncoding.DecodeString(arr[2])
 	if err != nil {
-		flag = 1
-		os.Exit(1)
+		return users.LoginForm{}, errors.New("token error!")
 	}
 
-	fmt.Println(sign)
 	hAndP := arr[0] + "." + arr[1]
-	fmt.Println(hAndP)
-	s := base64.StdEncoding.EncodeToString(HmacSha256(hAndP, "redrock"))
-	fmt.Println(s)
-	//if res := bytes.Compare(sign, s); res != 0 {
-	//	flag = 1
-	//}
+	ss := base64.StdEncoding.EncodeToString(HmacSha256(hAndP, key))
+	if res := strings.Compare(arr[2], ss); res != 0 {
+		return users.LoginForm{}, errors.New("token error!")
+	}
 
-	//if flag == 1 {
-	//	return users.LoginForm{}, errors.New("token error!")
-	//} else {
-	//	var payload Payload
-	//	//json.Unmarshal(pay, &payload)
-	//	return users.LoginForm{payload.Username, payload.Password}, nil
-	//}
+	var payload Payload
+	json.Unmarshal(pay, &payload)
+
+	return users.LoginForm{payload.Username, payload.Password}, nil
 }
 
 //Header 表示 Jwt 的 header
@@ -102,7 +92,7 @@ type Header struct {
 }
 
 //New 返回一个 Alg 为 HS256, Typ 为 JWT 的 Header 对象
-func (h Header) New() Header {
+func (h *Header) New() Header {
 	return Header{
 		Alg: "HS256",
 		Typ: "JWT",
@@ -119,7 +109,7 @@ type Payload struct {
 }
 
 //New 返回一个特定的 Payload
-func (p Payload) New(form users.LoginForm) Payload {
+func (p *Payload) New(form users.LoginForm) Payload {
 	return Payload{
 		Iss:      "redrock",
 		Exp:      strconv.FormatInt(time.Now().Add(3*time.Hour).Unix(), 10),
@@ -135,20 +125,18 @@ type Signature struct {
 }
 
 //New 返回 一个 signature
-func (s Signature) New() (string, error) {
-	j := NewJwt()
-	str, err := j.J2S()
+func (s *Signature) New(j Jwt) (string, error) {
+	str, err := j.headerAndPayload2str()
 	if err != nil {
 		errors.New("Header 和 Payload 拼接失败！")
 		return "", err
 	}
-
 	signature := base64.StdEncoding.EncodeToString(HmacSha256(str, s.key))
 	return signature, nil
 }
 
-//J2S() 将 Json 格式 的 Header 和 Payload 转换为 String 后并拼接
-func (j Jwt) J2S() (string, error) {
+//headerAndPayload2str() 将 Json 格式 的 Header 和 Payload 转换为 String 后并拼接
+func (j *Jwt) headerAndPayload2str() (string, error) {
 	h, err := json.Marshal(j.Header.New())
 	if err != nil {
 		errors.New("解析 Header 出错！")
@@ -167,6 +155,7 @@ func (j Jwt) J2S() (string, error) {
 
 func HmacSha256(str string, key string) []byte {
 	mac := hmac.New(sha256.New, []byte(key))
-	mac.Write([]byte(str))
+	mac.Write([]byte(key))
+	fmt.Println(mac.Sum(nil))
 	return mac.Sum(nil)
 }
